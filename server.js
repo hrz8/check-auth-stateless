@@ -11,7 +11,7 @@ app.use(express.json());
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const authenticationMiddleware = function(req, res, next) {
+const authenticationMiddleware = async function(req, res, next) {
     const token = req.header('Authorization');
 
     let decoded = null;
@@ -22,6 +22,25 @@ const authenticationMiddleware = function(req, res, next) {
         res.status(400);
         res.json({
             error: 'token invalid'
+        });
+
+        return;
+    }
+
+    req.user = await User.findOne({
+        where: {
+            id: decoded.sub,
+        },
+    });
+
+    next();
+}
+
+const authorizationMiddleware = async function(req, res, next) {
+    if (req.user.role !== 'ADMIN') {
+        res.status(401);
+        res.json({
+            error: 'your account has no privilege'
         });
 
         return;
@@ -78,6 +97,20 @@ app.get('/games', authenticationMiddleware, async function(req, res) {
 
     res.json({
         data: games,
+    });
+});
+
+app.post('/games', authenticationMiddleware, authorizationMiddleware, async function(req, res) {
+    const name = req.body.name;
+    const description = req.body.description;
+
+    const game = await Game.create({
+        name,
+        description
+    });
+
+    res.json({
+        data: game,
     });
 });
 
