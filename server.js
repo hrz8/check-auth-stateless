@@ -129,6 +129,10 @@ app.get('/dashboard/login', function(req, res) {
     res.render('login');
 });
 
+app.post('/dashboard/login', function(req, res) {
+    res.redirect('/dashboard/home');
+});
+
 app.get('/dashboard/home', function(req, res) {
     res.render('home');
 });
