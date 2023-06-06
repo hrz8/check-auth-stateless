@@ -4,7 +4,9 @@ const path = require('path');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const session = require('express-session')
 
+const passport = require('./utils/passport');
 const { User, Game } = require('./database/models');
 
 const app = express();
@@ -15,6 +17,11 @@ app.use(express.json());
 app.use(express.urlencoded({
     extended: true,
 }));
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -129,12 +136,19 @@ app.get('/dashboard/login', function(req, res) {
     res.render('login');
 });
 
-app.post('/dashboard/login', function(req, res) {
-    res.redirect('/dashboard/home');
-});
+app.post('/dashboard/login', passport.authenticate('local', {
+    successRedirect: '/dashboard/home',
+    failureRedirect: '',
+}));
 
 app.get('/dashboard/home', function(req, res) {
-    res.render('home');
+    if (!req.isAuthenticated()) {
+        res.redirect('/dashboard/login');
+    }
+    res.render('home', {
+        username: req.user.username,
+        role: req.user.role,
+    });
 });
 
 app.listen(PORT, function() {
