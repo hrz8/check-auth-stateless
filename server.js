@@ -3,22 +3,16 @@ require('dotenv').config();
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
+const { User, Game } = require('./database/models');
+
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-app.post('/login', function(req, res) {
-    const token = jwt.sign({
-        foo: 'bar',
-    }, JWT_SECRET);
-
-    res.send(token);
-});
-
-app.post('/validate-token', function(req, res) {
-    const token = req.body.token;
+const authenticationMiddleware = function(req, res, next) {
+    const token = req.header('Authorization');
 
     let decoded = null;
 
@@ -26,12 +20,65 @@ app.post('/validate-token', function(req, res) {
         decoded = jwt.verify(token, JWT_SECRET);
     } catch (error) {
         res.status(400);
-        res.send('token invalid');
+        res.json({
+            error: 'token invalid'
+        });
 
         return;
     }
 
-    res.json(decoded);
+    next();
+}
+
+app.post('/login', async function(req, res) {
+    const aud = req.header('x-audience');
+
+    const username = req.body.username;
+    const password = req.body.password;
+
+    const user = await User.findOne({
+        where: {
+            username,
+        },
+    });
+
+    if (!user) {
+        res.status(400);
+        res.json({
+            error: 'invalid login',
+        });
+
+        return;
+    }
+
+    if (user.password !== password) {
+        res.status(400);
+        res.json({
+            error: 'invalid login',
+        });
+
+        return;
+    }
+
+    const token = jwt.sign({
+        sub: String(user.id),
+        iss: 'game-app-binar',
+        aud: aud || 'dashboard',
+    }, JWT_SECRET, {
+        expiresIn: '1m',
+    });
+
+    res.json({
+        token
+    });
+});
+
+app.get('/games', authenticationMiddleware, async function(req, res) {
+    const games = await Game.findAll();
+
+    res.json({
+        data: games,
+    });
 });
 
 app.listen(PORT, function() {
