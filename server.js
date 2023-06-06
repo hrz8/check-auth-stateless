@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const { User, Game } = require('./database/models');
 
@@ -70,7 +71,10 @@ app.post('/login', async function(req, res) {
         return;
     }
 
-    if (user.password !== password) {
+    const encryptedPassword = user.password;
+    const isPasswordValid = bcrypt.compareSync(password, encryptedPassword);
+
+    if (!isPasswordValid) {
         res.status(400);
         res.json({
             error: 'invalid login',
