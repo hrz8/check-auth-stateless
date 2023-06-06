@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const path = require('path');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -7,7 +8,13 @@ const bcrypt = require('bcryptjs');
 const { User, Game } = require('./database/models');
 
 const app = express();
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, './views'))
+
 app.use(express.json());
+app.use(express.urlencoded({
+    extended: true,
+}));
 
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -116,6 +123,14 @@ app.post('/games', authenticationMiddleware, authorizationMiddleware, async func
     res.json({
         data: game,
     });
+});
+
+app.get('/dashboard/login', function(req, res) {
+    res.render('login');
+});
+
+app.get('/dashboard/home', function(req, res) {
+    res.render('home');
 });
 
 app.listen(PORT, function() {
